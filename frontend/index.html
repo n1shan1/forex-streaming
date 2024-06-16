@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forex Trading Dashboard</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      .container {
+        display: flex;
+        justify-content: space-between;
+      }
+      .section {
+        width: 48%;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DTCC Trading Platform</h1>
+    <div>
+      <label for="pair">Pair:</label>
+      <select id="pair">
+        <option value="EUR/USD">EUR/USD</option>
+        <option value="USD/JPY">USD/JPY</option>
+        <option value="GBP/USD">GBP/USD</option>
+        <option value="USD/CHF">USD/CHF</option>
+        <option value="AUD/USD">AUD/USD</option>
+        <option value="USD/CAD">USD/CAD</option>
+        <option value="NZD/USD">NZD/USD</option>
+        <option value="EUR/GBP">EUR/GBP</option>
+        <option value="EUR/AUD">EUR/AUD</option>
+        <option value="EUR/CAD">EUR/CAD</option>
+      </select>
+    </div>
+    <div class="container">
+      <div class="section">
+        <h2>Sell EUR Rates</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Bank</th>
+              <th>SPOT</th>
+              <th>1M</th>
+              <th>Sell EUR</th>
+            </tr>
+          </thead>
+          <tbody id="sell-container"></tbody>
+        </table>
+      </div>
+      <div class="section">
+        <h2>Buy EUR Rates</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Bank</th>
+              <th>SPOT</th>
+              <th>1M</th>
+              <th>Buy EUR</th>
+            </tr>
+          </thead>
+          <tbody id="buy-container"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const socket = new WebSocket("ws://localhost:3000");
+
+      socket.addEventListener("open", (event) => {
+        console.log("Connected to the WebSocket server");
+      });
+
+      socket.addEventListener("message", (event) => {
+        const data = JSON.parse(event.data);
+        const selectedPair = document.getElementById("pair").value;
+        const sellData = data.body.data.filter(
+          (item) => item.pair === selectedPair && item.type === "major"
+        );
+        const buyData = data.body.data.filter(
+          (item) => item.pair === selectedPair && item.type === "major"
+        );
+        displaySellData(sellData);
+        displayBuyData(buyData);
+      });
+
+      socket.addEventListener("close", (event) => {
+        console.log("Disconnected from the WebSocket server");
+      });
+
+      function displaySellData(data) {
+        const sellContainer = document.getElementById("sell-container");
+        sellContainer.innerHTML = "";
+
+        data.forEach((pair) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                    <td>${pair.bank}</td>
+                    <td>${pair.bid}</td>
+                    <td>${(pair.bid * 1.1).toFixed(3)}</td>
+                    <td>${pair.bid}</td>
+                `;
+          sellContainer.appendChild(row);
+        });
+      }
+
+      function displayBuyData(data) {
+        const buyContainer = document.getElementById("buy-container");
+        buyContainer.innerHTML = "";
+
+        data.forEach((pair) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                    <td>${pair.bank}</td>
+                    <td>${pair.ask}</td>
+                    <td>${(pair.ask * 1.1).toFixed(3)}</td>
+                    <td>${pair.ask}</td>
+                `;
+          buyContainer.appendChild(row);
+        });
+      }
+
+      document.getElementById("pair").addEventListener("change", () => {
+        socket.send(
+          JSON.stringify({
+            type: "changePair",
+            pair: document.getElementById("pair").value,
+          })
+        );
+      });
+    </script>
+  </body>
+</html>
